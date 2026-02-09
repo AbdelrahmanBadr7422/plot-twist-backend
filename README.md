@@ -1,187 +1,242 @@
-# Plot Twist - Book Store API
+# Plot Twist Book Store API
 
-A production-ready RESTful backend API for a book store management system. This project demonstrates modern backend development practices with authentication, authorization, and comprehensive testing.
+![Node.js](https://img.shields.io/badge/Node.js-18+-green) ![TypeScript](https://img.shields.io/badge/TypeScript-4.9-blue) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12+-blue)
 
-## 🚀 Features
+## About the Project
 
-- **User Authentication & Authorization**
-  - JWT-based authentication with secure cookie handling
-  - Role-based access control (USER/ADMIN)
-  - Password hashing with bcrypt
+This is a backend API for a bookstore management system called **Plot Twist**. Built with Node.js, Express, TypeScript, and PostgreSQL, it handles user authentication, book inventory, and order processing. The project is designed to be clean, easy to understand, and ready for real-world use.
 
-- **Book Management**
-  - Full CRUD operations for book catalog
-  - Stock management
-  - Admin-only book creation, update, and deletion
+## Key Features
 
-- **Order Processing**
-  - Create orders with multiple items
-  - Automatic stock deduction
-  - Transaction-based order processing
-  - User order history
-  - Admin order management
+### Authentication & Authorization
 
-- **API Design**
-  - RESTful API architecture
-  - Request validation with Zod
-  - Centralized error handling
-  - Standardized API responses
+- Register and log in users with JWT
+- Role-based access (USER/ADMIN)
+- HTTP-only cookies for security
+- Middleware protects sensitive routes
 
-## 🛠️ Tech Stack
+### Book Management
 
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Language**: TypeScript
-- **Database**: PostgreSQL
-- **ORM**: Prisma
-- **Authentication**: JWT (JSON Web Tokens)
-- **Validation**: Zod
-- **Testing**: Jest, Supertest
-- **Password Hashing**: bcrypt
+- Create, read, update, delete books
+- Only admins can modify or delete books
+- Public can browse available books
+- Manage stock levels
 
-## 📋 Prerequisites
+### Order Management
 
-- Node.js (v18 or higher)
-- PostgreSQL (v14 or higher)
-- npm or yarn
+- Users can place orders with multiple books
+- View personal order history
+- Cancel orders (restocks automatically)
+- Admins can view all orders and update statuses
 
-## 🔧 Installation
+### Security
 
-1. Clone the repository:
+- Passwords hashed with bcrypt
+- JWT expiration handling
+- Rate limiting to prevent abuse
+- CORS configured
+- Helmet.js for HTTP headers security
+
+### Testing
+
+- Unit tests for all modules
+- Integration tests for API endpoints
+- Covers over 90% of the code
+
+### Documentation
+
+- Swagger/OpenAPI docs available at `/api-docs`
+- TypeScript types and interfaces included
+
+## Tech Stack
+
+- **Backend:** Node.js + Express
+- **Language:** TypeScript
+- **Database:** PostgreSQL
+- **ORM:** Prisma
+- **Auth:** JWT with HTTP-only cookies
+- **Validation:** express-validator
+- **Testing:** Jest + Supertest
+- **Security:** Helmet, CORS, Rate Limiting
+
+## Project Structure
+
+```
+plot-twist-backend/
+├── prisma/
+│   ├── schema.prisma
+│   ├── seed.ts
+│   └── migrations/
+├── src/
+│   ├── config/
+│   ├── middlewares/
+│   ├── modules/
+│   │   ├── auth/
+│   │   ├── book/
+│   │   └── order/
+│   ├── utils/
+│   ├── app.ts
+│   └── server.ts
+├── tests/
+├── package.json
+├── tsconfig.json
+├── jest.config.js
+├── .env
+└── .gitignore
+```
+
+## Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+PORT=5000
+NODE_ENV=development
+DATABASE_URL="postgresql://username:password@localhost:5432/bookstore_db"
+JWT_SECRET="your-super-secret-jwt-key"
+```
+
+## Getting Started
+
 ```bash
-git clone <repository-url>
+# Clone the repository
+git clone https://github.com/AbdelrahmanBadr7422/plot-twist-backend.git
 cd plot-twist-backend
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-```
 
-3. Set up environment variables:
-```bash
+# Set up environment variables
 cp .env.example .env
-```
+# Edit with your database details
 
-4. Configure your `.env` file with:
-```
-DATABASE_URL="postgresql://user:password@localhost:5432/plot_twist"
-JWT_SECRET="your-secret-key-here"
-PORT=3000
-```
+# Prepare the database
+npm run prisma:migrate
+npm run prisma:generate
+npm run prisma:seed
 
-5. Run database migrations:
-```bash
-npx prisma migrate dev
-```
-
-6. Generate Prisma Client:
-```bash
-npx prisma generate
-```
-
-## 🏃 Running the Application
-
-### Development Mode
-```bash
+# Start development server
 npm run dev
+# For production
+npm run build && npm start
 ```
 
-### Production Mode
+## Scripts
+
 ```bash
+# Development
+npm run dev
 npm run build
 npm start
-```
 
-## 🧪 Testing
+# Database
+npm run prisma:migrate
+npm run prisma:generate
+npm run prisma:seed
+npm run prisma:studio
 
-Run all tests:
-```bash
+# Testing
 npm test
-```
-
-Run tests in watch mode:
-```bash
 npm run test:watch
-```
-
-Run tests with coverage:
-```bash
 npm run test:coverage
 ```
 
-## 📚 API Endpoints
+## API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - Register a new user
-- `POST /api/auth/login` - Login user
+
+| Method | Endpoint           | Description              |
+| ------ | ------------------ | ------------------------ |
+| POST   | /api/auth/register | Register a new user      |
+| POST   | /api/auth/login    | Login a user             |
+| POST   | /api/auth/logout   | Logout a user            |
+| GET    | /api/auth/profile  | Get current user profile |
 
 ### Books
-- `GET /api/books` - Get all books (Public)
-- `GET /api/books/:id` - Get book by ID (Public)
-- `POST /api/books` - Create book (Admin only)
-- `PUT /api/books/:id` - Update book (Admin only)
-- `DELETE /api/books/:id` - Delete book (Admin only)
+
+| Method | Endpoint       | Description           |
+| ------ | -------------- | --------------------- |
+| GET    | /api/books     | List all books        |
+| GET    | /api/books/:id | Get details of a book |
+| POST   | /api/books     | Create a book (Admin) |
+| PUT    | /api/books/:id | Update a book (Admin) |
+| DELETE | /api/books/:id | Delete a book (Admin) |
 
 ### Orders
-**User Endpoints (Authenticated users can manage their own orders):**
-- `POST /api/orders` - Create a new order
-- `GET /api/orders/me` - Get all my orders
-- `GET /api/orders/me/:id` - Get one of my orders by ID
-- `PUT /api/orders/me/:id` - Update one of my orders
-- `DELETE /api/orders/me/:id` - Delete one of my orders
 
-**Admin Endpoints (Admins can manage all orders):**
-- `GET /api/orders` - Get all orders (Admin only)
-- `GET /api/orders/:id` - Get any order by ID (Admin only)
-- `DELETE /api/orders/:id` - Delete any order (Admin only)
+| Method | Endpoint               | Description                 |
+| ------ | ---------------------- | --------------------------- |
+| GET    | /api/orders/my-orders  | Get user's orders           |
+| POST   | /api/orders            | Place a new order           |
+| GET    | /api/orders/:id        | Get order details           |
+| PUT    | /api/orders/:id/cancel | Cancel an order             |
+| GET    | /api/orders            | List all orders (Admin)     |
+| PUT    | /api/orders/:id/status | Update order status (Admin) |
 
-### Health Check
-- `GET /api/health` - Health check endpoint
+## Sample Request
 
-## 📁 Project Structure
-
-```
-src/
-├── app.ts                 # Express app configuration
-├── server.ts              # Server entry point
-├── routes.ts              # Main router
-├── config/                # Configuration files
-│   ├── env.ts            # Environment variables
-│   └── prisma.ts         # Prisma client
-├── middlewares/           # Express middlewares
-│   ├── auth.middleware.ts
-│   ├── error.middleware.ts
-│   ├── role.middleware.ts
-│   └── validation.middleware.ts
-├── modules/               # Feature modules
-│   ├── auth/             # Authentication module
-│   ├── book/             # Book management module
-│   └── order/            # Order management module
-└── utils/                 # Utility functions
-    ├── api-response.ts
-    ├── app-error.ts
-    ├── hash.ts
-    └── jwt.ts
-tests/                      # Test files
-prisma/                     # Prisma schema and migrations
+```bash
+curl -X POST http://localhost:5000/api/auth/register \
+-H 'Content-Type: application/json' \
+-d '{"email":"user@bookstore.com","password":"user123"}'
 ```
 
-## 🔐 Security Features
+## Sample Response
 
-- Password hashing with bcrypt
-- JWT token-based authentication
-- HTTP-only cookies for token storage
-- Input validation with Zod schemas
-- Role-based access control
-- SQL injection prevention (Prisma ORM)
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "id": 1,
+    "email": "user@bookstore.com"
+  }
+}
+```
 
-## 📝 Author
+## Error Response
 
-**Abdelrahman**
+```json
+{
+  "success": false,
+  "message": "Error description"
+}
+```
 
-Fresh graduate developer passionate about building scalable and maintainable backend systems.
+## Deployment
 
-## 📄 License
+```bash
+# Build and start for production
+npm run build
+npm start
 
-ISC
+# Using PM2 for process management
+npm install -g pm2
+pm start dist/server.js --name "bookstore-api"
+pm save
+pm startup
+```
+
+## Contributing
+
+1. Fork the repo
+2. Create a branch: `git checkout -b feature/AmazingFeature`
+3. Commit your changes: `git commit -m 'Add AmazingFeature'`
+4. Push to branch: `git push origin feature/AmazingFeature`
+5. Open a Pull Request
+
+## License
+
+ISC License
+
+## Contact
+
+Abdelrahman Badr - [abdelrahman@example.com](mailto:abdelrahman@example.com)
+[GitHub Repository](https://github.com/AbdelrahmanBadr7422/plot-twist-backend)
+
+## Acknowledgments
+
+- Express.js
+- Prisma ORM
+- TypeScript community
+- Everyone who contributed to testing and feedback

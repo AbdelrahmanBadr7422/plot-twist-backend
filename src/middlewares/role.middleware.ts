@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { errorResponse } from "../utils/api-response";
 
-// Simple interface for authenticated request
 interface AuthRequest extends Request {
   user?: {
     userId: number;

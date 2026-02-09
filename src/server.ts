@@ -4,28 +4,31 @@ import { prisma } from "./config/prisma";
 
 const startServer = async () => {
   try {
-    // Test database connection
     await prisma.$connect();
-    console.log("Database connected successfully");
+    console.log("Database connected");
 
-    // Start server
+    if (config.nodeEnv === "development") {
+      console.log("Development mode - security relaxed");
+    } else {
+      console.log("Production mode - security active");
+    }
+
     app.listen(config.port, () => {
-      console.log(`Server running on port ${config.port}`);
-      console.log(`Environment: ${config.nodeEnv}`);
-      console.log(`Health check: http://localhost:${config.port}/api/health`);
-      console.log(`Swagger docs: http://localhost:${config.port}/api-docs`);
+      console.log(`Server: http://localhost:${config.port}`);
+      console.log(`Docs: http://localhost:${config.port}/api-docs`);
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    console.error("Failed to start:", error);
     process.exit(1);
   }
 };
 
-// Graceful shutdown
 process.on("SIGINT", async () => {
   await prisma.$disconnect();
-  console.log("Database connection closed");
   process.exit(0);
 });
 
-startServer();
+
+if (process.env.NODE_ENV !== "test") {
+  startServer();
+}

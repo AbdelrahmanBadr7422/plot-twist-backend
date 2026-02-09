@@ -12,19 +12,16 @@ import { AppError } from "../../utils/app-error";
 export const register = async (
   data: RegisterRequest,
 ): Promise<AuthResponse> => {
-  // Check if user exists
   const existingUser = await findUserByEmail(data.email);
+
   if (existingUser) {
     throw new AppError("Email already registered", 400);
   }
 
-  // Hash password
   const hashedPassword = await hashPassword(data.password);
 
-  // Create user
   const user = await createUser(data.email, hashedPassword, data.name);
 
-  // Generate token
   const token = generateToken({
     userId: user.id,
     email: user.email,
@@ -32,25 +29,27 @@ export const register = async (
   });
 
   return {
-    user,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    },
     token,
   };
 };
 
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
-  // Find user
   const user = await findUserByEmail(data.email);
   if (!user) {
     throw new AppError("Invalid email or password", 401);
   }
 
-  // Check password
   const isValid = await comparePassword(data.password, user.password);
   if (!isValid) {
     throw new AppError("Invalid email or password", 401);
   }
 
-  // Generate token
   const token = generateToken({
     userId: user.id,
     email: user.email,

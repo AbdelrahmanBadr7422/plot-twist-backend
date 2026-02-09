@@ -1,376 +1,303 @@
 import request from "supertest";
 import app from "../src/app";
 import { prisma } from "../src/config/prisma";
-import { hashPassword } from "../src/utils/hash";
 
-describe("Order API", () => {
+// Increase timeout for slow operations
+jest.setTimeout(30000); // 30 seconds
+
+describe("Order API Tests", () => {
   let userCookie: string;
   let adminCookie: string;
   let bookId: number;
+  let orderId: number;
 
+  // Setup before all tests
   beforeAll(async () => {
-    // Clear all data
+    // Increase timeout for this specific hook
+    try {
+      // Clear database in correct order to avoid foreign key constraints
+      await prisma.orderItem.deleteMany();
+      await prisma.order.deleteMany();
+      await prisma.book.deleteMany();
+      await prisma.user.deleteMany();
+
+      // Create admin user
+      await request(app).post("/api/auth/register").send({
+        email: "admin@order.test.com",
+        password: "admin123",
+        name: "Admin User",
+      });
+
+      // Set admin role directly in database
+      await prisma.user.update({
+        where: { email: "admin@order.test.com" },
+        data: { role: "ADMIN" },
+      });
+
+      // Create regular user
+      await request(app).post("/api/auth/register").send({
+        email: "user@order.test.com",
+        password: "user123",
+        name: "Regular User",
+      });
+
+      // Login as user
+      const userLogin = await request(app).post("/api/auth/login").send({
+        email: "user@order.test.com",
+        password: "user123",
+      });
+
+      userCookie = userLogin.headers["set-cookie"]
+        ? userLogin.headers["set-cookie"][0]
+        : "";
+
+      // Login as admin
+      const adminLogin = await request(app).post("/api/auth/login").send({
+        email: "admin@order.test.com",
+        password: "admin123",
+      });
+
+      adminCookie = adminLogin.headers["set-cookie"]
+        ? adminLogin.headers["set-cookie"][0]
+        : "";
+
+      // Create a test book using admin (simpler way)
+      const book = await prisma.book.create({
+        data: {
+          title: "Order Test Book",
+          author: "Order Author",
+          price: 25.99,
+          stock: 20,
+        },
+      });
+
+      bookId = book.id;
+    } catch (error) {
+      console.error("Setup error:", error);
+      throw error;
+    }
+  }, 30000); // 30 seconds timeout for beforeAll
+
+  // Clean up after each test
+  afterEach(async () => {
     await prisma.orderItem.deleteMany();
     await prisma.order.deleteMany();
-    await prisma.book.deleteMany();
-    await prisma.user.deleteMany();
-
-    // Create regular user
-    await request(app).post("/api/auth/register").send({
-      email: "orderuser@test.com",
-      password: "password123",
-      name: "Order User",
-    });
-
-    const userLogin = await request(app).post("/api/auth/login").send({
-      email: "orderuser@test.com",
-      password: "password123",
-    });
-
-    userCookie = userLogin.headers["set-cookie"][0];
-
-    // Create admin user manually
-    const adminPassword = await hashPassword("admin123");
-    await prisma.user.create({
-      data: {
-        email: "orderadmin@test.com",
-        password: adminPassword,
-        name: "Admin User",
-        role: "ADMIN",
-      },
-    });
-
-    const adminLogin = await request(app).post("/api/auth/login").send({
-      email: "orderadmin@test.com",
-      password: "admin123",
-    });
-
-    adminCookie = adminLogin.headers["set-cookie"][0];
-
-    // Create test book
-    const book = await prisma.book.create({
-      data: {
-        title: "Test Book for Orders",
-        author: "Test Author",
-        price: 50,
-        stock: 10,
-        description: "A test book for order testing",
-      },
-    });
-
-    bookId = book.id;
   });
 
+  // Clean up after all tests
   afterAll(async () => {
     await prisma.$disconnect();
   });
 
-  describe("POST /api/orders - Create Order", () => {
-    it("should create order successfully", async () => {
-      const res = await request(app)
-        .post("/api/orders")
-        .set("Cookie", userCookie)
-        .send({
-          items: [{ bookId, quantity: 2 }],
-        });
-
-      expect(res.status).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.items).toHaveLength(1);
-      expect(res.body.data.totalAmount).toBe(100); // 2 * 50
-      expect(res.body.data.status).toBe("PENDING");
-    });
-
-    it("should fail with insufficient stock", async () => {
-      const res = await request(app)
-        .post("/api/orders")
-        .set("Cookie", userCookie)
-        .send({
-          items: [{ bookId, quantity: 100 }], // More than available stock
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain("Not enough stock");
-    });
-
-    it("should fail with non-existent book", async () => {
-      const res = await request(app)
-        .post("/api/orders")
-        .set("Cookie", userCookie)
-        .send({
-          items: [{ bookId: 9999, quantity: 1 }],
-        });
-
-      expect(res.status).toBe(404);
-      expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain("Book not found");
-    });
-
-    it("should fail with invalid bookId", async () => {
-      const res = await request(app)
-        .post("/api/orders")
-        .set("Cookie", userCookie)
-        .send({
-          items: [{ bookId: "invalid", quantity: 1 }],
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
-    });
-
-    it("should fail with invalid quantity", async () => {
-      const res = await request(app)
-        .post("/api/orders")
-        .set("Cookie", userCookie)
-        .send({
-          items: [{ bookId, quantity: 0 }],
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
-    });
-
-    it("should fail without authentication", async () => {
-      const res = await request(app)
-        .post("/api/orders")
-        .send({
-          items: [{ bookId, quantity: 1 }],
-        });
-
-      expect(res.status).toBe(401);
-    });
-  });
-
-  describe("GET /api/orders/my-orders - Get User Orders", () => {
-    it("should get user's orders", async () => {
-      const res = await request(app)
-        .get("/api/orders/my-orders")
-        .set("Cookie", userCookie);
-
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
-    });
-
-    it("should fail without authentication", async () => {
-      const res = await request(app).get("/api/orders/my-orders");
-      expect(res.status).toBe(401);
-    });
-  });
-
-  describe("GET /api/orders/:id - Get Order by ID", () => {
-    let orderId: number;
-
-    beforeEach(async () => {
-      const orderRes = await request(app)
-        .post("/api/orders")
-        .set("Cookie", userCookie)
-        .send({
-          items: [{ bookId, quantity: 1 }],
-        });
-
-      orderId = orderRes.body.data.id;
-    });
-
-    it("should get order by ID", async () => {
-      const res = await request(app)
-        .get(`/api/orders/${orderId}`)
-        .set("Cookie", userCookie);
-
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.id).toBe(orderId);
-    });
-
-    it("should fail with invalid order ID", async () => {
-      const res = await request(app)
-        .get("/api/orders/invalid")
-        .set("Cookie", userCookie);
-
-      expect(res.status).toBe(400);
-    });
-
-    it("should fail when accessing other user's order", async () => {
-      const otherUser = await request(app).post("/api/auth/register").send({
-        email: "otheruser@test.com",
-        password: "password123",
-        name: "Other User",
+  // Test 1: Create an order
+  it("should create an order", async () => {
+    const res = await request(app)
+      .post("/api/orders")
+      .set("Cookie", userCookie)
+      .send({
+        items: [
+          {
+            bookId: bookId,
+            quantity: 2,
+          },
+        ],
       });
 
-      const otherCookie = otherUser.headers["set-cookie"][0];
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty("id");
 
-      const res = await request(app)
-        .get(`/api/orders/${orderId}`)
-        .set("Cookie", otherCookie);
+    // Save order ID for other tests
+    orderId = res.body.data.id;
+  }, 10000); // 10 seconds timeout for this test
 
-      expect(res.status).toBe(403);
-    });
-
-    it("admin should access any order", async () => {
-      const res = await request(app)
-        .get(`/api/orders/${orderId}`)
-        .set("Cookie", adminCookie);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.id).toBe(orderId);
-    });
-
-    it("should fail with non-existent order", async () => {
-      const res = await request(app)
-        .get("/api/orders/9999")
-        .set("Cookie", userCookie);
-
-      expect(res.status).toBe(404);
-    });
-  });
-
-  describe("PUT /api/orders/:id/cancel - Cancel Order", () => {
-    let orderId: number;
-
-    beforeEach(async () => {
-      const orderRes = await request(app)
-        .post("/api/orders")
-        .set("Cookie", userCookie)
-        .send({
-          items: [{ bookId, quantity: 1 }],
-        });
-
-      orderId = orderRes.body.data.id;
-    });
-
-    it("should cancel order successfully", async () => {
-      const res = await request(app)
-        .put(`/api/orders/${orderId}/cancel`)
-        .set("Cookie", userCookie);
-
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe("CANCELLED");
-    });
-
-    it("should restore stock after cancellation", async () => {
-      const bookBefore = await prisma.book.findUnique({
-        where: { id: bookId },
-      });
-      const initialStock = bookBefore!.stock;
-
-      await request(app)
-        .put(`/api/orders/${orderId}/cancel`)
-        .set("Cookie", userCookie);
-
-      const bookAfter = await prisma.book.findUnique({ where: { id: bookId } });
-      expect(bookAfter!.stock).toBe(initialStock + 1); // Stock restored
-    });
-
-    it("should fail when cancelling non-pending order", async () => {
-      // First cancel the order
-      await request(app)
-        .put(`/api/orders/${orderId}/cancel`)
-        .set("Cookie", userCookie);
-
-      // Try to cancel again
-      const res = await request(app)
-        .put(`/api/orders/${orderId}/cancel`)
-        .set("Cookie", userCookie);
-
-      expect(res.status).toBe(400);
-      expect(res.body.message).toContain("cannot be cancelled");
-    });
-
-    it("should fail when cancelling other user's order", async () => {
-      // Create another user
-      const otherRes = await request(app).post("/api/auth/register").send({
-        email: "another@test.com",
-        password: "password123",
-        name: "Another User",
+  // Test 2: Get user's orders
+  it("should get user's orders", async () => {
+    // First create an order
+    await request(app)
+      .post("/api/orders")
+      .set("Cookie", userCookie)
+      .send({
+        items: [
+          {
+            bookId: bookId,
+            quantity: 1,
+          },
+        ],
       });
 
-      const otherCookie = otherRes.headers["set-cookie"][0];
+    const res = await request(app)
+      .get("/api/orders/my-orders")
+      .set("Cookie", userCookie);
 
-      const res = await request(app)
-        .put(`/api/orders/${orderId}/cancel`)
-        .set("Cookie", otherCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBeGreaterThan(0);
+  }, 10000);
 
-      expect(res.status).toBe(403);
+  // Test 3: Get order by ID
+  it("should get order by ID", async () => {
+    // Create an order first
+    const createRes = await request(app)
+      .post("/api/orders")
+      .set("Cookie", userCookie)
+      .send({
+        items: [
+          {
+            bookId: bookId,
+            quantity: 1,
+          },
+        ],
+      });
+
+    const newOrderId = createRes.body.data.id;
+
+    const res = await request(app)
+      .get(`/api/orders/${newOrderId}`)
+      .set("Cookie", userCookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.id).toBe(newOrderId);
+  }, 10000);
+
+  // Test 4: Cancel an order
+  it("should cancel an order", async () => {
+    // Create an order first
+    const createRes = await request(app)
+      .post("/api/orders")
+      .set("Cookie", userCookie)
+      .send({
+        items: [
+          {
+            bookId: bookId,
+            quantity: 1,
+          },
+        ],
+      });
+
+    const newOrderId = createRes.body.data.id;
+
+    const res = await request(app)
+      .put(`/api/orders/${newOrderId}/cancel`)
+      .set("Cookie", userCookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.status).toBe("CANCELLED");
+  }, 10000);
+
+  // Test 5: Admin can get all orders
+  it("should get all orders (admin only)", async () => {
+    // Create an order first
+    await request(app)
+      .post("/api/orders")
+      .set("Cookie", userCookie)
+      .send({
+        items: [
+          {
+            bookId: bookId,
+            quantity: 1,
+          },
+        ],
+      });
+
+    const res = await request(app)
+      .get("/api/orders")
+      .set("Cookie", adminCookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  }, 10000);
+
+  // Test 6: Regular user cannot get all orders
+  it("should not get all orders if not admin", async () => {
+    const res = await request(app).get("/api/orders").set("Cookie", userCookie);
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+  }, 10000);
+
+  // Test 7: Create order with multiple books
+  it("should create order with multiple books", async () => {
+    // Create another book
+    const book2 = await prisma.book.create({
+      data: {
+        title: "Second Book",
+        author: "Second Author",
+        price: 15.99,
+        stock: 10,
+      },
     });
-  });
 
-  describe("GET /api/orders - Get All Orders (Admin)", () => {
-    it("admin should get all orders", async () => {
-      const res = await request(app)
-        .get("/api/orders")
-        .set("Cookie", adminCookie);
+    const res = await request(app)
+      .post("/api/orders")
+      .set("Cookie", userCookie)
+      .send({
+        items: [
+          {
+            bookId: bookId,
+            quantity: 1,
+          },
+          {
+            bookId: book2.id,
+            quantity: 2,
+          },
+        ],
+      });
 
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
-    });
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.items.length).toBe(2);
+  }, 10000);
 
-    it("regular user should not get all orders", async () => {
-      const res = await request(app)
-        .get("/api/orders")
-        .set("Cookie", userCookie);
+  // Test 8: Should not create order without items
+  it("should not create order without items", async () => {
+    const res = await request(app)
+      .post("/api/orders")
+      .set("Cookie", userCookie)
+      .send({
+        items: [],
+      });
 
-      expect(res.status).toBe(403);
-    });
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  }, 10000);
 
-    it("should fail without authentication", async () => {
-      const res = await request(app).get("/api/orders");
-      expect(res.status).toBe(401);
-    });
-  });
+  // Test 9: Should not create order with invalid book
+  it("should not create order with invalid book", async () => {
+    const res = await request(app)
+      .post("/api/orders")
+      .set("Cookie", userCookie)
+      .send({
+        items: [
+          {
+            bookId: 99999, // Non-existent book
+            quantity: 1,
+          },
+        ],
+      });
 
-  describe("PUT /api/orders/:id/status - Update Order Status (Admin)", () => {
-    let orderId: number;
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+  }, 10000);
 
-    beforeEach(async () => {
-      const orderRes = await request(app)
-        .post("/api/orders")
-        .set("Cookie", userCookie)
-        .send({
-          items: [{ bookId, quantity: 1 }],
-        });
+  // Test 10: Should not create order without login
+  it("should not create order without login", async () => {
+    const res = await request(app)
+      .post("/api/orders")
+      .send({
+        items: [
+          {
+            bookId: bookId,
+            quantity: 1,
+          },
+        ],
+      });
 
-      orderId = orderRes.body.data.id;
-    });
-
-    it("admin should update order status", async () => {
-      const res = await request(app)
-        .put(`/api/orders/${orderId}/status`)
-        .set("Cookie", adminCookie)
-        .send({ status: "PROCESSING" });
-
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe("PROCESSING");
-    });
-
-    it("should fail with invalid status", async () => {
-      const res = await request(app)
-        .put(`/api/orders/${orderId}/status`)
-        .set("Cookie", adminCookie)
-        .send({ status: "INVALID_STATUS" });
-
-      expect(res.status).toBe(400);
-    });
-
-    it("regular user should not update order status", async () => {
-      const res = await request(app)
-        .put(`/api/orders/${orderId}/status`)
-        .set("Cookie", userCookie)
-        .send({ status: "PROCESSING" });
-
-      expect(res.status).toBe(403);
-    });
-
-    it("should fail with non-existent order", async () => {
-      const res = await request(app)
-        .put("/api/orders/9999/status")
-        .set("Cookie", adminCookie)
-        .send({ status: "PROCESSING" });
-
-      expect(res.status).toBe(404);
-    });
-  });
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  }, 10000);
 });

@@ -4,8 +4,8 @@ export interface CreateBookRequest {
   author: string;
   price: number;
   stock?: number;
-  description: string | null;
-  coverImage: string | null;
+  description?: string|null;
+  coverImage?: string|null;
 }
 
 export interface UpdateBookRequest {
@@ -13,8 +13,8 @@ export interface UpdateBookRequest {
   author?: string;
   price?: number;
   stock?: number;
-  description: string | null;
-  coverImage: string | null;
+  description?: string;
+  coverImage?: string;
 }
 
 // Response types
@@ -28,9 +28,4 @@ export interface BookResponse {
   coverImage: string | null;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface BooksListResponse {
-  books: BookResponse[];
-  count: number;
 }

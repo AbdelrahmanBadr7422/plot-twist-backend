@@ -1,28 +1,49 @@
 import { Router } from "express";
-import * as controller from "./book.controller";
+
+import { authMiddleware } from "../../middlewares/auth.middleware";
+import { requireAdmin } from "../../middlewares/role.middleware";
 import { validate } from "../../middlewares/validation.middleware";
+
 import {
-  bookIdValidator,
   createBookValidators,
   updateBookValidators,
+  bookIdValidator,
 } from "./book.validators";
+
+import * as bookController from "./book.controller";
 
 const router = Router();
 
-router.get("/", controller.getBooks);
+// Public routes
+router.get("/", bookController.getBooks);
+router.get("/:id", bookIdValidator, validate, bookController.getBook);
 
-router.get("/:id", bookIdValidator, validate, controller.getBook);
-
-router.post("/", createBookValidators, validate, controller.createBook);
+// Admin routes
+router.post(
+  "/",
+  createBookValidators,
+  validate,
+  authMiddleware,
+  requireAdmin,
+  bookController.createBook,
+);
 
 router.put(
   "/:id",
-  bookIdValidator,
   updateBookValidators,
   validate,
-  controller.updateBook,
+  authMiddleware,
+  requireAdmin,
+  bookController.updateBook,
 );
 
-router.delete("/:id", bookIdValidator, validate, controller.deleteBook);
+router.delete(
+  "/:id",
+  bookIdValidator,
+  validate,
+  authMiddleware,
+  requireAdmin,
+  bookController.deleteBook,
+);
 
 export default router;

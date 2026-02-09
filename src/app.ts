@@ -1,11 +1,16 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import routes from "./routes";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+
+import authRoutes from "./modules/auth/auth.routes";
+import bookRoutes from "./modules/book/book.routes";
+import orderRoutes from "./modules/order/order.routes";
+
 import { errorMiddleware } from "./middlewares/error.middleware";
 import { setupSwagger } from "./config/swagger";
 
-// Add type declaration here
 declare global {
   namespace Express {
     interface Request {
@@ -20,25 +25,41 @@ declare global {
 
 const app = express();
 
-// Middleware
+app.use(helmet());
+
 app.use(
   cors({
-    origin: true,
+    origin: ["http://localhost:3000"],
     credentials: true,
   }),
 );
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+});
+
+app.use("/api", limiter);
+
 app.use(express.json());
 app.use(cookieParser());
 
-// Setup Swagger (only in development)
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
   setupSwagger(app);
 }
 
-// Routes
-app.use("/api", routes);
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    service: "Plot Twist Book Store API",
+  });
+});
 
-// Error handling
+app.use("/api/auth", authRoutes);
+app.use("/api/books", bookRoutes);
+app.use("/api/orders", orderRoutes);
+
 app.use(errorMiddleware);
 
 export default app;

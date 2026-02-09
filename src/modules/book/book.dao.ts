@@ -5,7 +5,6 @@ import {
   BookResponse,
 } from "./book.types";
 
-// Export each function individually
 export const createBook = async (
   data: CreateBookRequest,
 ): Promise<BookResponse> => {
@@ -15,8 +14,8 @@ export const createBook = async (
       author: data.author,
       price: data.price,
       stock: data.stock || 0,
-      description: data.description,
-      coverImage: data.coverImage,
+      description: data.description || null,
+      coverImage: data.coverImage || null,
     },
   });
 
@@ -67,4 +66,52 @@ export const updateBookStock = async (
   });
 
   return book;
+};
+
+export const getBookWithOrders = async (id: number) => {
+  return prisma.book.findUnique({
+    where: { id },
+    include: {
+      orderItems: {
+        include: {
+          order: true,
+        },
+      },
+    },
+  });
+};
+
+export const searchBooks = async (query: string): Promise<BookResponse[]> => {
+  return prisma.book.findMany({
+    where: {
+      OR: [
+        { title: { contains: query, mode: "insensitive" } },
+        { author: { contains: query, mode: "insensitive" } },
+        { description: { contains: query, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+export const getBooksByAuthor = async (
+  author: string,
+): Promise<BookResponse[]> => {
+  return prisma.book.findMany({
+    where: {
+      author: { contains: author, mode: "insensitive" },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+export const getLowStockBooks = async (
+  threshold: number = 5,
+): Promise<BookResponse[]> => {
+  return prisma.book.findMany({
+    where: {
+      stock: { lte: threshold },
+    },
+    orderBy: { stock: "asc" },
+  });
 };

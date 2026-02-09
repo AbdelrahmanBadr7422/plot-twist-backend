@@ -1,4 +1,3 @@
-// This file tests the health check endpoint
 import request from "supertest";
 import app from "../src/app";
 

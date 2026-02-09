@@ -3,7 +3,6 @@ import * as service from "./auth.service";
 import { successResponse, errorResponse } from "../../utils/api-response";
 import { cookieOptions } from "../../utils/jwt";
 
-// Simple interface for authenticated request
 interface AuthRequest extends Request {
   user?: {
     userId: number;
@@ -11,6 +10,12 @@ interface AuthRequest extends Request {
     role: string;
   };
 }
+/**
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: Auth APIs
+ */
 
 /**
  * @swagger
@@ -53,7 +58,6 @@ export const register = async (
   try {
     const result = await service.register(req.body);
 
-    // Set token in HTTP-only cookie
     res.cookie("token", result.token, cookieOptions);
 
     successResponse(
@@ -102,7 +106,6 @@ export const login = async (
   try {
     const result = await service.login(req.body);
 
-    // Set token in HTTP-only cookie
     res.cookie("token", result.token, cookieOptions);
 
     successResponse(res, { user: result.user }, "Login successful");
@@ -129,7 +132,6 @@ export const getProfile = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    // Type assertion
     const authReq = req as AuthRequest;
 
     if (!authReq.user) {

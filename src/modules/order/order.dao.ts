@@ -21,27 +21,36 @@ export const createOrder = async (
       },
     });
 
-    await Promise.all(
-      items.map((item) =>
-        tx.orderItem.create({
-          data: {
-            orderId: order.id,
-            bookId: item.bookId,
-            quantity: item.quantity,
-            price: item.price,
-          },
-        }),
-      ),
-    );
+    for (const item of items) {
+      await tx.orderItem.create({
+        data: {
+          orderId: order.id,
+          bookId: item.bookId,
+          quantity: item.quantity,
+          price: item.price,
+        },
+      });
+    }
 
-    await Promise.all(
-      items.map((item) =>
-        tx.book.update({
-          where: { id: item.bookId },
-          data: { stock: { decrement: item.quantity } },
-        }),
-      ),
-    );
+    for (const item of items) {
+      const result = await tx.book.updateMany({
+        where: {
+          id: item.bookId,
+          stock: {
+            gte: item.quantity,
+          },
+        },
+        data: {
+          stock: {
+            decrement: item.quantity,
+          },
+        },
+      });
+
+      if (result.count === 0) {
+        throw new Error("Not enough stock");
+      }
+    }
 
     return tx.order.findUnique({
       where: { id: order.id },
@@ -49,7 +58,11 @@ export const createOrder = async (
         items: {
           include: {
             book: {
-              select: { id: true, title: true, author: true },
+              select: {
+                id: true,
+                title: true,
+                author: true,
+              },
             },
           },
         },
@@ -65,7 +78,11 @@ export const getOrderById = (id: number) => {
       items: {
         include: {
           book: {
-            select: { id: true, title: true, author: true },
+            select: {
+              id: true,
+              title: true,
+              author: true,
+            },
           },
         },
       },
@@ -80,7 +97,11 @@ export const getOrdersByUser = (userId: number) => {
       items: {
         include: {
           book: {
-            select: { id: true, title: true, author: true },
+            select: {
+              id: true,
+              title: true,
+              author: true,
+            },
           },
         },
       },
@@ -92,11 +113,21 @@ export const getOrdersByUser = (userId: number) => {
 export const getAllOrders = () => {
   return prisma.order.findMany({
     include: {
-      user: { select: { id: true, email: true, name: true } },
+      user: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      },
       items: {
         include: {
           book: {
-            select: { id: true, title: true, author: true },
+            select: {
+              id: true,
+              title: true,
+              author: true,
+            },
           },
         },
       },
@@ -113,7 +144,11 @@ export const updateOrderStatus = async (id: number, status: string) => {
       items: {
         include: {
           book: {
-            select: { id: true, title: true, author: true },
+            select: {
+              id: true,
+              title: true,
+              author: true,
+            },
           },
         },
       },
@@ -127,14 +162,16 @@ export const cancelOrderWithStockRestoration = async (orderId: number) => {
       where: { orderId },
     });
 
-    await Promise.all(
-      orderItems.map((item) =>
-        tx.book.update({
-          where: { id: item.bookId },
-          data: { stock: { increment: item.quantity } },
-        }),
-      ),
-    );
+    for (const item of orderItems) {
+      await tx.book.update({
+        where: { id: item.bookId },
+        data: {
+          stock: {
+            increment: item.quantity,
+          },
+        },
+      });
+    }
 
     return tx.order.update({
       where: { id: orderId },
@@ -143,7 +180,11 @@ export const cancelOrderWithStockRestoration = async (orderId: number) => {
         items: {
           include: {
             book: {
-              select: { id: true, title: true, author: true },
+              select: {
+                id: true,
+                title: true,
+                author: true,
+              },
             },
           },
         },

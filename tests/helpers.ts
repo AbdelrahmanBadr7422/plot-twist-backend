@@ -11,3 +11,19 @@ export const createBook = async () => {
     },
   });
 };
+د;
+
+export const createUserAndLogin = async () => {
+  await request(app).post("/api/auth/register").send({
+    email: "order@test.com",
+    password: "Password123",
+    name: "User",
+  });
+
+  const loginRes = await request(app).post("/api/auth/login").send({
+    email: "order@test.com",
+    password: "Password123",
+  });
+
+  return loginRes.headers["set-cookie"];
+};

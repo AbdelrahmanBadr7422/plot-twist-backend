@@ -12,14 +12,11 @@ export const createOrder = async (userId: number, data: CreateOrderRequest) => {
     });
 
     if (!book) {
-      throw new AppError(`Book with ID ${item.bookId} not found`, 404);
+      throw new AppError(`Book ${item.bookId} not found`, 404);
     }
 
     if (book.stock < item.quantity) {
-      throw new AppError(
-        `Not enough stock for "${book.title}". Available: ${book.stock}, Requested: ${item.quantity}`,
-        400,
-      );
+      throw new AppError(`Not enough stock for ${book.title}`, 400);
     }
 
     items.push({
@@ -29,7 +26,11 @@ export const createOrder = async (userId: number, data: CreateOrderRequest) => {
     });
   }
 
-  return orderDao.createOrder(userId, items);
+  try {
+    return await orderDao.createOrder(userId, items);
+  } catch {
+    throw new AppError("Order failed no items avaliable", 400);
+  }
 };
 
 export const getOrderById = async (
@@ -44,7 +45,7 @@ export const getOrderById = async (
   }
 
   if (role !== "ADMIN" && order.userId !== userId) {
-    throw new AppError("You are not authorized to view this order", 403);
+    throw new AppError("Not authorized", 403);
   }
 
   return order;
@@ -66,14 +67,11 @@ export const cancelOrder = async (orderId: number, userId: number) => {
   }
 
   if (order.userId !== userId) {
-    throw new AppError("You are not authorized to cancel this order", 403);
+    throw new AppError("Not authorized", 403);
   }
 
   if (order.status !== "PENDING") {
-    throw new AppError(
-      `Order cannot be cancelled. Current status: ${order.status}`,
-      400,
-    );
+    throw new AppError("Cannot cancel now", 400);
   }
 
   return orderDao.cancelOrderWithStockRestoration(orderId);
@@ -86,20 +84,13 @@ export const updateOrderStatus = async (
   role: string,
 ) => {
   if (role !== "ADMIN") {
-    throw new AppError("Admin access required", 403);
+    throw new AppError("Admin only", 403);
   }
 
-  const order = await orderDao.getOrderById(orderId);
-  if (!order) {
-    throw new AppError("Order not found", 404);
-  }
+  const valid = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
 
-  const validStatuses = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
-  if (!validStatuses.includes(status)) {
-    throw new AppError(
-      `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
-      400,
-    );
+  if (!valid.includes(status)) {
+    throw new AppError("Invalid status", 400);
   }
 
   return orderDao.updateOrderStatus(orderId, status);
