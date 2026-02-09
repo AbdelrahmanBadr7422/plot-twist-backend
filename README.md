@@ -210,20 +210,33 @@ This project uses GitHub Actions for simple CI. You can create a workflow in `.g
 Example simple workflow that prints a message:
 
 ```yaml
-name: Simple CI
+name: CI
+
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
 jobs:
-  print-message:
+  test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Say Hello
-        run: echo "🚀 CI pipeline is running for Plot Twist Backend!"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
 ```
 
 ## Deployment
