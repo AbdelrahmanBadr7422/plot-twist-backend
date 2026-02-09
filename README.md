@@ -10,54 +10,54 @@ This is a backend API for a bookstore management system called **Plot Twist**. B
 
 ### Authentication & Authorization
 
-- Register and log in users with JWT
-- Role-based access (USER/ADMIN)
-- HTTP-only cookies for security
-- Middleware protects sensitive routes
+* Register and log in users with JWT
+* Role-based access (USER/ADMIN)
+* HTTP-only cookies for security
+* Middleware protects sensitive routes
 
 ### Book Management
 
-- Create, read, update, delete books
-- Only admins can modify or delete books
-- Public can browse available books
-- Manage stock levels
+* Create, read, update, delete books
+* Only admins can modify or delete books
+* Public can browse available books
+* Manage stock levels
 
 ### Order Management
 
-- Users can place orders with multiple books
-- View personal order history
-- Cancel orders (restocks automatically)
-- Admins can view all orders and update statuses
+* Users can place orders with multiple books
+* View personal order history
+* Cancel orders (restocks automatically)
+* Admins can view all orders and update statuses
 
 ### Security
 
-- Passwords hashed with bcrypt
-- JWT expiration handling
-- Rate limiting to prevent abuse
-- CORS configured
-- Helmet.js for HTTP headers security
+* Passwords hashed with bcrypt
+* JWT expiration handling
+* Rate limiting to prevent abuse
+* CORS configured
+* Helmet.js for HTTP headers security
 
 ### Testing
 
-- Unit tests for all modules
-- Integration tests for API endpoints
-- Covers over 90% of the code
+* Unit tests for all modules
+* Integration tests for API endpoints
+* Covers over 90% of the code
 
 ### Documentation
 
-- Swagger/OpenAPI docs available at `/api-docs`
-- TypeScript types and interfaces included
+* Swagger/OpenAPI docs available at `/api-docs`
+* TypeScript types and interfaces included
 
 ## Tech Stack
 
-- **Backend:** Node.js + Express
-- **Language:** TypeScript
-- **Database:** PostgreSQL
-- **ORM:** Prisma
-- **Auth:** JWT with HTTP-only cookies
-- **Validation:** express-validator
-- **Testing:** Jest + Supertest
-- **Security:** Helmet, CORS, Rate Limiting
+* **Backend:** Node.js + Express
+* **Language:** TypeScript
+* **Database:** PostgreSQL
+* **ORM:** Prisma
+* **Auth:** JWT with HTTP-only cookies
+* **Validation:** express-validator
+* **Testing:** Jest + Supertest
+* **Security:** Helmet, CORS, Rate Limiting
 
 ## Project Structure
 
@@ -203,6 +203,29 @@ curl -X POST http://localhost:5000/api/auth/register \
 }
 ```
 
+## Continuous Integration (CI)
+
+This project uses GitHub Actions for simple CI. You can create a workflow in `.github/workflows/ci.yml` that prints messages or runs tests automatically on push or pull request.
+
+Example simple workflow that prints a message:
+
+```yaml
+name: Simple CI
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+jobs:
+  print-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Say Hello
+        run: echo "🚀 CI pipeline is running for Plot Twist Backend!"
+```
+
 ## Deployment
 
 ```bash
@@ -231,12 +254,12 @@ ISC License
 
 ## Contact
 
-Abdelrahman Badr - [abdelrahman@example.com](mailto:abdelrahman@example.com)
+Abdelrahman Badr - [Linkedin](https://www.linkedin.com/in/abdelrahmanbadr74/)
 [GitHub Repository](https://github.com/AbdelrahmanBadr7422/plot-twist-backend)
 
 ## Acknowledgments
 
-- Express.js
-- Prisma ORM
-- TypeScript community
-- Everyone who contributed to testing and feedback
+* Express.js
+* Prisma ORM
+* TypeScript community
+* Everyone who contributed to testing and feedback
