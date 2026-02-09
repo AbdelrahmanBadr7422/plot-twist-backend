@@ -7,5 +7,6 @@ describe("Health Check", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.status).toBe("OK");
+    expect(response.body.service).toBe("Plot Twist Book Store API");
   });
 });
